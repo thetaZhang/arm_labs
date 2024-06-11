@@ -1,0 +1,499 @@
+\documentclass[12pt, a4paper, oneside]{ctexart}
+\usepackage{fancyhdr}
+\usepackage{amsmath, amsthm, amssymb, bm, graphicx, hyperref, mathrsfs, graphicx, float, subfigure, caption, makecell, longtable,framed,booktabs}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{listings}
+\usepackage{indentfirst}
+\usepackage{labels}
+\usepackage{enumitem}
+\setlength{\parindent}{2em}
+\renewcommand{\lstlistingname}{code}
+\lstset{
+    language=C++, % 设置语言
+ basicstyle=\ttfamily, % 设置字体族
+ breaklines=true, % 自动换行
+ keywordstyle=\bfseries\color{NavyBlue}, % 设置关键字为粗体，颜色为 NavyBlue
+ morekeywords={}, % 设置更多的关键字，用逗号分隔
+ emph={self,input,output,wire,reg,posedge,negedge}, % 指定强调词，如果有多个，用逗号隔开
+    emphstyle=\bfseries\color{Rhodamine}, % 强调词样式设置
+    commentstyle=\itshape\color{black!50!white}, % 设置注释样式，斜体，浅灰色
+    stringstyle=\bfseries\color{PineGreen!90!black}, % 设置字符串样式
+    columns=flexible,
+    numbers=left, % 显示行号在左边
+    numbersep=2em, % 设置行号的具体位置
+    numberstyle=\footnotesize, % 缩小行号
+    frame=single, % 边框
+    framesep=1em % 设置代码与边框的距离
+}
+\usepackage[left=1in, right=1in, top=1in, bottom=1in]{geometry}
+
+
+\ctexset{
+    % 修改 section。
+    section={   
+        format=\heiti\raggedright\zihao{-2} % 设置 section 标题为黑体、右对齐、小4号字
+    },
+    % 修改 subsection。
+    subsection={   
+        format=\heiti\zihao{4} % 设置 subsection 标题为黑体、5号字
+    }
+}
+
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\thepage}
+
+\title{\textbf{ARM实验报告(讨论题)}}
+\author{张浩宇 522031910129}
+\date{}
+
+\begin{document}
+    \maketitle
+    \section{实验一：时钟选择与 GPIO 实验}
+    \begin{enumerate}[listparindent=2em]
+        \item 在硬件不改变的情况下，在程序中将内部时钟
+        从16M改为8M，或将外部时钟从25M改为30M，会有什么结果？
+        
+        {\kaishu 由于时钟频率的改变，使系统频率变化，会导致延时函数的延时时间的改变，从而使闪烁频率改变。}
+
+        \item 能否将启用PLL后的系统时钟频率调整到
+        PIOSC(16M)或MOSC(25M)以下？
+        
+        {\kaishu 可以。将PLL频率配置为300MHz或400，可输出此PPL频率的任意分频作为
+        系统频率，最低可配置为6Mhz，因此可以将系统时钟调整到PIOSC(16M)或MOSC(25M)以下。}
+
+        
+        \item 将PLL后的时钟调整为最大值 120M，LED 闪烁会有什么变化？为什么？
+        
+        {\kaishu 会使LED闪烁频率很快，在快闪时由于闪烁变化超过人眼的分辨能力，会表现为常亮。}
+
+        \item 理解\verb|GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_0, GPIO_PIN_0)|函数中每个函数
+        参数的意义。第三个函数项为\verb|GPIO_PIN_0|，如果改为 1 或改为 2，或其他值，分别有什么
+        现象？
+
+        {\kaishu 第一个参数表示操作的GPIO端口基地址，这里表示操作端口F；第二个参数表示操作的引脚，这里仅操作第一个引脚PF0；
+        第三个参数表示操作的引脚的电平值，这里仅将PF0设置为高电平，PF0的LED点亮。
+
+        \verb|GPIO_PIN_0|的值得为0x01。如果改为1，PF0引脚的状态仍为高电平，现象不变。
+        如果改为2，即0x02，PF0引脚处为低电平，LED将熄灭。
+        如果修改为其他值，仅当最低位即PF0对应位置为1时，PF0的LED点亮，否则将熄灭
+        }
+
+        \item 结合硬件说明\verb|GPIOPinConfigure|行的作用。如果此行注释，在 WATCH 窗口中观察
+        \verb|key_value|值会有什么变化？
+
+        {\kaishu 该行的作用是GPIO引脚配置，将PJ0和PJ1输入配置为驱动强度2mA、推挽上拉模式。
+        如果此行注释，}
+
+        \item 为什么在慢闪时，按住 \verb|USR_SW1| 时，没有马上进入快闪模式？
+        
+        {\kaishu 在实验一的程序中，闪烁是通过阻塞延时来实现的，其在延时时，MCU被完全阻塞，
+        不执行其他任务。若在阻塞延时中按下开关，则必须等当前延时结束后才会处理响应按键按下，
+        因此不能马上进入快闪模式。}
+
+       
+        
+       
+       
+
+    \end{enumerate}
+
+    \section{实验二：I2C GPIO 扩展及 SYSTICK 中断实验}
+    \begin{enumerate}[listparindent=2em]
+        \item  在使用PIOSC 及 MOSC 时，能否生成频率不等于晶振频率的系统时钟？如内部晶振为
+        16M，能否生成10M的系统时钟频率。
+
+        {\kaishu 可以。在使用PIOSC 及 MOSC 时，
+        可以通过PLL来生成频率不等于晶振频率的系统时钟。
+        例如，要生成10M的系统时钟频率，只需在初始化时调用下列配置函数：
+        \begin{lstlisting}
+SysCtlClockFreqSet((SYSCTL_OSC_INT|SYSCTL_USE_PLL|SYSCTL_CFG_VCO_480),10000000);
+        \end{lstlisting}
+        }
+
+        \item 在使用PLL 时，系统频率最小值及最大值分别为多少？
+        
+        {\kaishu 在使用PLL 时，系统频率最小值为6Mhz，最大值为120Mhz。}
+        
+        \item 如果跑马灯要求为2位跑马，例：当显示为 1 时，跑马灯点亮 LED8，LED1，当显
+        示为 2 时，跑马灯点亮 LED1，LED2，如此循环，如何实现？
+
+        {\kaishu 定义一个\verb|uint8_t|类型的变量\verb|bit_choose|作为数码管的位选，初始值为0x81，
+        当SysTick计数达到上限，输出标志，要改变数码管状态时，按照如下方式改变\verb|bit_choose|的值：}
+
+        \begin{lstlisting}
+        if (value & 0x80) {  // 最高位的1移到最低位
+            value = (value << 1) | 0x01;  
+        } else {
+            value <<= 1; 
+        }
+        \end{lstlisting}
+
+        {这样每次位选两个数码管并且移动，实现2位跑马。}
+
+        \item 在 3 基础上，数码管显示也改为 2 位显示。例
+        
+        第一步 显示 1，2，跑马灯显示 LED1,2
+        
+        第二步 显示 2，3，跑马灯显示 LED2，3
+        
+        ......
+        
+        第八步 显示 8，1，跑马灯显示 LED8，1
+        
+        第九步 回到第一步
+
+        {\kaishu 在3的基础上，要实现数码管不同位显示不同的数字，需要对数码管快速的扫描，快速切换位选和断码，
+        以表现出显示不同的数字。
+        定义一个\verb|uint8_t|类型的变量\verb|bit_choose|作为数码管的位选，指向每次点亮的两个数码管的较前一个，初始值0x01，
+        定义一个\verb|uint8_t|类型的变量\verb|seg_display|表示当前显示的数字段码索引，初始值为0。
+
+        在SysTick中断服务函数中，设定100ms和1ms的两个计数标志，分别作为数码管扫描和数码管滚动显示的标志。}
+        }
+        \begin{lstlisting}
+void SysTick_Handler(void)
+{
+    if (systick_100ms_couter	!= 0)
+	    systick_100ms_couter--;
+    else
+    {
+	    systick_100ms_couter	= SYSTICK_FREQUENCY/10;
+	    systick_100ms_status 	= 1;
+    }
+    if (systick_1ms_couter	!= 0)
+        systick_1ms_couter--;
+    else
+    {
+        systick_1ms_couter	= SYSTICK_FREQUENCY/1000;
+        systick_1ms_status 	= 1;
+    }
+}   
+        \end{lstlisting}
+
+        {\kaihsu 每当\verb|systick_100ms_status|为1时，切换位选和段码，以显示不同的数字，
+        每当\verb|systick_1ms_status|为1时，进行扫描显示。} 
+        \begin{lstlisting}
+void main(){
+    ...... 
+    while(1) {
+        ...... 
+        if (systick_100ms_status == 1) {
+            systick_100ms_status = 0;
+            bit_choose = (bit_choose << 1) | (bit_choose >> 7) // 位选移动
+            seg_display = (seg_display + 1) % 8; // 数码管显示索引移动
+        }
+
+        if (systick_1ms_status == 1) {
+            systick_1ms_status = 0;
+            Display( bit_choose, seg_display); 
+        }
+    }
+}
+        \end{lstlisting}
+
+    {\kaishu \verb|Display(uint8_t bit_choose, uint8_t seg_display)|函数实现一次显示扫描。}
+
+    \begin{lstlisting}
+void Display(uint8_t bit_choose, uint8_t seg_display) {
+    static uint8_t extra_bit=0; // 标志当前显示第一位还是第二位
+    result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT1,seg7[(seg_display+extra_bit)%8]); // 段选	
+    result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT2,(bit_choose << extra_bit) | (bit_choose >> 7*extra_bit )); // 位选
+    extra_bit!=extra_bit; 
+}
+    \end{lstlisting}
+
+        \item 用 \verb|USR_SW1| 控制跑马灯的频率，
+        
+        按第 1 下，间隔为 1S；
+        
+        按第 2 下，间隔为 2S；
+
+        按第 3 下，间隔为 0.2S；
+        
+        按第 4 下，回到上电初始状态，间隔 0.5S。
+        
+        以 4 为模，循环往复。
+
+        {\kaishu 在SysTick中断服务函数中，检测按键的按下，根据按键的按下次数，改变跑马灯计数上限标志的值。}
+
+        \begin{lstlisting}
+void SysTick_Handler(void)
+{
+    static uint8_t key_value, key_value_last=1,key_press_count=0;
+    if (systick_couter	!= 0)
+	    systick_couter--;
+    else
+    {
+	    systick_couter	= SYSTICK_MAX; // 达到上限SYSTICK_MAX时触发标志
+	    systick_status 	= 1;
+    }
+
+    key_value = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0); // 读取按键状态
+    if (key_value == 0 && key_value_last != 0) { // 按键按下时
+        key_press_count++;
+        if (key_press_count == 1) {
+            SYSTICK_MAX=SYSTICK_FREQUENCY; // 1s
+        } else if (key_press_count == 2) {
+            SYSTICK_MAX=2*SYSTICK_FREQUENCY; // 2s
+        } else if (key_press_count == 3) {
+            SYSTICK_MAX=SYSTICK_FREQUENCY/5; // 0.2s
+        } else if (key_press_count == 4) {
+            SYSTICK_MAX=SYSTICK_FREQUENCY/2; // 0.5s
+            key_press_count = 0; // 回到初始状态
+        }
+    } 
+
+    key_value_las=key_value;
+}
+        \end{lstlisting}
+
+        \item 请编程在数码管上实现时钟功能，在数码管上最左端显示分钟+秒数，其中分钟及秒数均为 2 位数字。
+        如 12:00，共 5 位。
+        
+        每隔一秒，自动加 1，当秒数到 60 时，自动分钟加 1，秒数回到 00，分钟及秒数显示范围 00~59。
+        
+        当按下 \verb|USR_SW1| 时，秒数自动加 1；
+        
+        当按下 \verb|USR_SW2| 时，分钟自动加 1；
+        
+        当按下以上一个或两个按键不松开时，对应的显示跳变数每隔 200mS 自动加 1。即如下
+
+        按下 \verb|USR_SW1| 1S，则显示跳变秒数加 5。
+
+        {\kaishu 定义全局变量\verb|min|和\verb|sec|存储当前时间，Systick的1s计时标志有效时，增加对应时间值，并通过快速扫描实现
+        时间在数码管上显示。}
+        \begin{lstlisting}
+void main(){
+    ...... 
+    while(1) {
+        ...... 
+        if (systick_1s_status == 1) { // 时间增加和进位
+            systick_1s_status = 0;
+            sec++;
+            if (sec == 60) {
+                sec = 0;
+                min++;
+                if (min == 60) {
+                    min = 0;
+                }
+            }
+        if (systick_1ms_status == 1) { // 扫描显示时钟
+            systick_1ms_status = 0;
+            Display();
+        }
+        
+    }
+}
+        \end{lstlisting}
+
+    {\kaishu 其中\verb|Display()|函数实现数码管的快速扫描显示。}
+
+    \begin{lstlisting}
+void Display() {
+    static uint8_t i=0; // 指示本次扫描的位置
+    // 构造当前显示的段码
+	uint8_t seg_array[8];
+	seg_array[0]=(seg7[(min)/10];
+	seg_array[1]=(seg7[(min)%10];
+	seg_array[2]=0x40;
+	seg_array[3]=(seg7[(sec)/10];
+	seg_array[4]=(seg7[(sec)%10];
+    
+    // 位选和段选显示本次扫描位的数字
+	result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT1,seg_array[i]);										
+	result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT2,(uint8_t)(0x01 << i));
+	i++;
+	if (i==5) i=0; // 仅用前5位显示
+}
+    \end{lstlisting}
+
+    {\kaishu 在SysTick中断服务函数中，根据按键按下情况，改变当前计时变量值和1s计数上限}
+\begin{lstlisting}
+void SysTick_Handler(void)
+{
+    static uint8_t key_value1, key_value1_last=1,key_value2, key_value2_last=1;
+    key_value1 = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0); // 读取按键状态
+    key_value2 = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_1); // 读取按键状态
+    if (key_value == 0 && key_value_last != 0) { // 按键1按下时
+        SYSTICK_1s_MAX=SYSTICK_FREQUENCY; // 1s
+        sec++;
+        if (sec == 60) {
+            sec = 0;
+            min++;
+            if (min == 60) {
+                min = 0;
+            }
+        }
+    } 
+    else if(key_value == 0 && key_value_last == 0) { // 按键1长按时
+        SYSTICK_1s_MAX=SYSTICK_FREQUENCY/5; // 0.2s // 改变计数上限
+    }
+    else {
+        SYSTICK_1s_MAX=SYSTICK_FREQUENCY; // 1s
+    }
+    if (key_value2 == 0 && key_value2_last != 0) { // 按键2按下时
+        min++;
+        if (min == 60) {
+            min = 0;
+        }
+    }
+    
+    if (systick_1s_couter	!= 0) // 计时增加计数
+	    systick_1s_couter--;
+    else
+    {
+	    systick_1s_couter	= SYSTICK_1s_MAX; // 达到上限SYSTICK_MAX时触发标志
+	    systick_1s_status 	= 1;
+    }
+    if (systick_1ms_status == 1) { // 扫描显示计数
+        systick_1ms_status = 0;
+        Display( bit_choose, seg_display); 
+    }
+
+   
+
+    key_value_las=key_value;
+}
+\end{lstlisting}
+    \end{enumerate}
+    
+    \section{实验三：UART 串行通讯口及中断优先级实验}
+
+    \begin{enumerate}[listparindent=2em]
+        \item 实验 3\-2，\verb|if (UARTCharsAvail(UART0_BASE))|此行程序的作用。如果没有此行，会导致
+        什么问题？
+
+        {\kaishu 此行程序的作用是判断UART0接收FIFO中是否有数据，如果有数据时接收并按原样发送，没有数据则跳过。
+        
+        如果没有此行，每次主程序循环串口会一直进行阻塞接收和发送，程序会阻塞在此，不能执行跑马灯等其他任务。}
+
+        \item 实验 3\-3，\verb|void UART0_Handler(void)|为什么没有在主函数声明？
+        
+        {\kaishu \verb|void UART0_Handler(void)|是一个中断服务函数，
+        其函数名是固定的，在\verb|startup_TM4C129.s|文件中已默认注册，
+        在主函数中重写即可覆盖该函数，无需另声明。}
+        
+        \item 为什么 3\-3 的中断中需要读取中断标志并清除，而 \verb|SYSTICK| 不需要？
+        
+        {\kaishu 因为SysTick中断会被硬件自动清除。}
+
+        \item 请根据上位机发出的命令字符串，如“MAY+01”，其中：
+        
+        MAY 为月份，（JAN,FEB,…DEC）均为三位。
+
+        “+”表示加运算符,“-”表示减运算符，均为 1 位。
+
+        01 表示增加或减少量，均为 2 位。范围 00-11。
+
+        以上均为 ASCII 码，MAY+01 应该回之以JUNE，MAY-06 应该回之以 NOV。
+
+        {\kaishu 在UART0中断服务函数中，对接收的字符串判断，并根据不同情况进行处理，
+        发送相应的字符串即可。
+        
+        定义一个表示月份的全局数组以便操作，并定义两个全局变量分别表示接收到的月份和要增加的月份。}
+        
+    \begin{lstlisting}     
+char *month[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};  
+int8\_t mouth=0,add=0; // 接收到的月份和要增加的月份
+    \end{lstlisting}
+
+        {\kaishu 在UART0中断服务函数中，以非阻塞方式接收字符，
+        并进行判断，以确定对应的月份和月份增加数。}
+
+        \begin{lstlisting}[language=C++]
+void UART0_Handler() {
+    .....
+    UARTStringGetNonBlocking(msg); // 接收字符串
+    for (int i=0;i<12;i++) {
+        if (strncmp(msg, month[i], 3) == 0) {
+            mouth = i;
+            break;
+        }
+        if (i==11) {
+            UARTStringPutNonBlocking("Invalid month!\n");
+            return;
+        }
+    }
+    
+    // 确定增加的月份
+    if (msg[3] == '+') { 
+        add = (msg[4]-'0')*10 + (msg[5]-'0');
+        mouth += add;
+        mouth %= 12; // 防止超界
+    } else if (msg[3] == '-') {
+        add = (msg[4]-'0')*10 + (msg[5]-'0');
+        mouth -= add;
+        mouth = (mouth+12)%12; // 防止超界
+    } else {
+        UARTStringPutNonBlocking("Invalid command!\n");
+        return;
+    }
+
+    UARTStringPutNonBlocking(month[mouth]); // 输出处理好的月份
+
+
+}
+
+    \end{lstlisting}
+    
+    \item 请根据上位机的命令，如“14:12+05:06”，字符串中：
+    
+    14:12 为分钟与秒，共 5 位，包括一个“:”。
+
+    “+” 表示加运算符, “-” 表示减运算符，均为 1 位。
+
+    05:06 为分钟与秒的变化量，共 5 位。包括一个“：”，范围 00:00~23:59。
+
+    以上均为 ASCII 码，14:12+05:06 回之以 19:18。
+
+    {\kaishu 在UART0中断服务函数中，对接收的字符串判断，并根据不同情况进行处理。
+    根据输入字符串得到分钟和秒，然后根据加减号和变化量进行处理，最后输出处理好的分钟和秒。}
+
+    \begin{lstlisting}
+void UART0_Handler() {
+    .....
+    UARTStringGetNonBlocking(msg); // 接收字符串
+    uint8_t min = (msg[0]-'0')*10 + (msg[1]-'0');
+    uint8_t sec = (msg[3]-'0')*10 + (msg[4]-'0');
+    uint8_t add_min = (msg[6]-'0')*10 + (msg[7]-'0');
+    uint8_t add_sec = (msg[9]-'0')*10 + (msg[10]-'0');
+
+    if (msg[5] == '+') {
+        min += add_min;
+        sec += add_sec;
+        if (sec>=60) {    // 处理进位
+            min += sec/60;
+            sec %= 60;
+        }
+        if (min>=60) {    // 处理进位
+            min %= 60;
+        }
+    } else if (msg[5] == '-') {
+        min -= add_min;
+        sec -= add_sec;
+        if (sec<0) {    // 处理借位
+            min -= 1;
+            sec += 60;
+        }
+        if (min<0) {    
+            min = 0;
+            UARTStringPutNonBlocking("Invalid input!\n");
+        }
+    } else {
+        UARTStringPutNonBlocking("Invalid command!\n");
+        return;
+    }
+    char time_str[6]; // 创建一个字符数组来存储时间字符串
+    sprintf(time_str, "%02d:%02d", min, sec); // 格式化时间
+    UARTStringPutNonBlocking(time_str); // 输出时间 
+}
+    \end{lstlisting}
+        
+
+
+\end{enumerate}
+        
+\end{document}
+
