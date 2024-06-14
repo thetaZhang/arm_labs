@@ -125,16 +125,16 @@ SysCtlClockFreqSet((SYSCTL_OSC_INT|SYSCTL_USE_PLL|SYSCTL_CFG_VCO_480),10000000);
         当SysTick计数达到上限，输出标志，要改变数码管状态时，按照如下方式改变\verb|bit_choose|的值：}
 
         \begin{lstlisting}
-        if (value & 0x80) {  // 最高位的1移到最低位
-            value = (value << 1) | 0x01;  
-        } else {
-            value <<= 1; 
-        }
-        \end{lstlisting}
+    if (value & 0x80) {  // 最高位的1移到最低位
+        value = (value << 1) | 0x01;  
+    } else {
+        value <<= 1; 
+    }
+    \end{lstlisting}
 
         {这样每次位选两个数码管并且移动，实现2位跑马。}
 
-        \item 在 3 基础上，数码管显示也改为 2 位显示。例
+        \item 在 3 基础上，数码管显示也改为 2 位显示。例如
         
         第一步 显示 1，2，跑马灯显示 LED1,2
         
@@ -152,7 +152,7 @@ SysCtlClockFreqSet((SYSCTL_OSC_INT|SYSCTL_USE_PLL|SYSCTL_CFG_VCO_480),10000000);
         定义一个\verb|uint8_t|类型的变量\verb|seg_display|表示当前显示的数字段码索引，初始值为0。
 
         在SysTick中断服务函数中，设定100ms和1ms的两个计数标志，分别作为数码管扫描和数码管滚动显示的标志。}
-        }
+        
         \begin{lstlisting}
 void SysTick_Handler(void)
 {
@@ -173,7 +173,7 @@ void SysTick_Handler(void)
 }   
         \end{lstlisting}
 
-        {\kaihsu 每当\verb|systick_100ms_status|为1时，切换位选和段码，以显示不同的数字，
+        {\kaishu 每当\verb|systick_100ms_status|为1时，切换位选和段码，以显示不同的数字，
         每当\verb|systick_1ms_status|为1时，进行扫描显示。} 
         \begin{lstlisting}
 void main(){
@@ -182,8 +182,8 @@ void main(){
         ...... 
         if (systick_100ms_status == 1) {
             systick_100ms_status = 0;
-            bit_choose = (bit_choose << 1) | (bit_choose >> 7) // 位选移动
-            seg_display = (seg_display + 1) % 8; // 数码管显示索引移动
+        bit_choose = (bit_choose << 1) | (bit_choose >> 7) // 位选移动
+        seg_display = (seg_display + 1) % 8; // 数码管显示索引移动
         }
 
         if (systick_1ms_status == 1) {
@@ -199,8 +199,10 @@ void main(){
     \begin{lstlisting}
 void Display(uint8_t bit_choose, uint8_t seg_display) {
     static uint8_t extra_bit=0; // 标志当前显示第一位还是第二位
-    result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT1,seg7[(seg_display+extra_bit)%8]); // 段选	
-    result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT2,(bit_choose << extra_bit) | (bit_choose >> 7*extra_bit )); // 位选
+    // 段选	
+    result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT1,seg7[(seg_display+extra_bit)%8]); 
+    // 位选
+    result = I2C0_WriteByte(TCA6424_I2CADDR,TCA6424_OUTPUT_PORT2,(bit_choose << extra_bit) | (bit_choose >> 7*extra_bit ));
     extra_bit!=extra_bit; 
 }
     \end{lstlisting}
@@ -226,12 +228,12 @@ void SysTick_Handler(void)
     if (systick_couter	!= 0)
 	    systick_couter--;
     else
-    {
-	    systick_couter	= SYSTICK_MAX; // 达到上限SYSTICK_MAX时触发标志
+    {   // 达到上限SYSTICK_MAX时触发标志
+	    systick_couter	= SYSTICK_MAX; 
 	    systick_status 	= 1;
     }
 
-    key_value = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0); // 读取按键状态
+    key_value = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0); // 读取按键
     if (key_value == 0 && key_value_last != 0) { // 按键按下时
         key_press_count++;
         if (key_press_count == 1) {
@@ -315,8 +317,9 @@ void Display() {
 void SysTick_Handler(void)
 {
     static uint8_t key_value1, key_value1_last=1,key_value2, key_value2_last=1;
-    key_value1 = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0); // 读取按键状态
-    key_value2 = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_1); // 读取按键状态
+    // 读取按键状态
+    key_value1 = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0); 
+    key_value2 = GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_1); 
     if (key_value == 0 && key_value_last != 0) { // 按键1按下时
         SYSTICK_1s_MAX=SYSTICK_FREQUENCY; // 1s
         sec++;
@@ -345,7 +348,8 @@ void SysTick_Handler(void)
 	    systick_1s_couter--;
     else
     {
-	    systick_1s_couter	= SYSTICK_1s_MAX; // 达到上限SYSTICK_MAX时触发标志
+        // 达到上限SYSTICK_MAX时触发标志
+	    systick_1s_couter	= SYSTICK_1s_MAX; 
 	    systick_1s_status 	= 1;
     }
     if (systick_1ms_status == 1) { // 扫描显示计数
